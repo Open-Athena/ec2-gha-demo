@@ -1,8 +1,64 @@
 name: Test EC2 GPU Runner
 on:
   workflow_dispatch:
+    inputs:
+      n_sleeps:
+        description: "Number of sleep iterations to perform"
+        required: false
+        type: number
+        default: 0
+      sleep_s:
+        description: "Duration of each sleep in seconds"
+        required: false
+        type: number
+        default: 60
+      ssh_pubkey:
+        description: "SSH public key to add to authorized_keys (optional input)"
+        required: false
+        type: string
+      aws_key_name:
+        description: "Name of the EC2 key pair to use for SSH access"
+        required: false
+        type: string
+      aws_security_group_id:
+        description: "AWS security group ID (for SSH access)"
+        required: false
+        type: string
+permissions:
+  id-token: write  # Required for AWS OIDC authentication
+  contents: read   # Required for actions/checkout
 jobs:
-  placeholder:
-    runs-on: ubuntu-latest
+  # EC2 runner automatically terminates itself
+  ec2:
+    uses: Open-Athena/ec2/.github/workflows/runner.yml@dev
+    secrets:
+      AWS_ROLE: ${{ secrets.AWS_ROLE }}  # Role to assume for provisioning
+      GH_SA_TOKEN: ${{ secrets.GH_SA_TOKEN }}  # GitHub "Service Account" token for runner registration
+    with:
+      ssh_pubkey: ${{ inputs.ssh_pubkey }}  # Optional SSH key to install on node, for debugging
+      aws_key_name: ${{ inputs.aws_key_name }}  # Name of the EC2 key pair to use for SSH access
+      aws_security_group_id: ${{ inputs.aws_security_group_id }}  # Security group for SSH access
+  gpu-test:
+    needs: ec2
+    runs-on: ${{ needs.ec2.outputs.instance }}
     steps:
-      - run: echo "Placeholder workflow"
+      - uses: actions/checkout@v4
+      - name: System info
+        run: ./scripts/system-info.sh
+      - name: Check NVIDIA GPU
+        run: ./scripts/check-nvidia-gpu.sh
+      - name: Test CUDA
+        run: ./scripts/test-cuda.sh
+      - name: Python GPU test
+        run: ./scripts/test-python-gpu.sh
+      - name: Self-termination check
+        run: ./scripts/check-self-termination.sh
+      - name: Sleep loop test
+        run: |
+          echo "=== Sleep Loop Test ==="
+          echo "Performing ${{ inputs.n_sleeps }} sleep iterations of ${{ inputs.sleep_s }} seconds each"
+          for i in $(seq 1 ${{ inputs.n_sleeps }}); do
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] Sleep iteration $i/${{ inputs.n_sleeps }} - sleeping for ${{ inputs.sleep_s }} seconds..."
+            sleep ${{ inputs.sleep_s }}
+          done
+          echo "[$(date '+%Y-%m-%d %H:%M:%S')] Sleep loop completed"
