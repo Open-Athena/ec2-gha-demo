@@ -5,7 +5,7 @@ This repository demonstrates the usage of Open-Athena's self-terminating EC2 run
 ## What it does
 
 The workflow in this repo:
-1. Starts an EC2 GPU instance (g6.xlarge with NVIDIA L4)
+1. Starts an EC2 GPU instance (g4dn.xlarge)
 2. Runs various GPU tests:
    - `nvidia-smi` to verify GPU access
    - CUDA compilation test
@@ -33,8 +33,6 @@ See [.github/workflows/test-gpu.yml](.github/workflows/test-gpu.yml) for the imp
 - ✅ Minimal boilerplate (just 2 jobs)
 - ✅ GPU instance access
 - ✅ Automatic cleanup (no stop job needed)
-- ✅ Fork protection built-in
-- ✅ Label-based approval for external PRs
 
 ## Monitoring
 
