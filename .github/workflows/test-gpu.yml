@@ -16,11 +16,11 @@ on:
         description: "SSH public key to add to authorized_keys (optional, for debugging)"
         required: false
         type: string
-      aws_key_name:
+      ec2_key_name:
         description: "Name of an EC2 key pair to use for SSH access (optional, for debugging)"
         required: false
         type: string
-      aws_security_group_id:
+      ec2_security_group_id:
         description: "AWS security group ID (for SSH access; optional, for debugging)"
         required: false
         type: string
@@ -35,8 +35,8 @@ jobs:
     with:
       # aws_role: ${{ vars.AWS_ROLE }}  # Pass an explicit value here, or Open-Athena/ec2 will fall back to `vars.AWS_ROLE`
       ssh_pubkey: ${{ inputs.ssh_pubkey }}  # Optional SSH key to install on node, for debugging
-      aws_key_name: ${{ inputs.aws_key_name }}  # Name of the EC2 key pair to use for SSH access
-      aws_security_group_id: ${{ inputs.aws_security_group_id }}  # Security group for SSH access
+      ec2_key_name: ${{ inputs.ec2_key_name }}  # Name of the EC2 key pair to use for SSH access
+      ec2_security_group_id: ${{ inputs.ec2_security_group_id }}  # Security group for SSH access
   gpu-test:
     needs: ec2
     runs-on: ${{ needs.ec2.outputs.instance }}
