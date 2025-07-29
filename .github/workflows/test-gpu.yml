@@ -24,7 +24,7 @@ permissions:
   contents: read   # Required for actions/checkout
 jobs:
   ec2:
-    uses: Open-Athena/ec2/.github/workflows/runner.yml@dev
+    uses: Open-Athena/ec2/.github/workflows/runner.yml@rw/dbg
     secrets:
       GH_SA_TOKEN: ${{ secrets.GH_SA_TOKEN }}  # GitHub "Service Account" token for runner registration
     with:

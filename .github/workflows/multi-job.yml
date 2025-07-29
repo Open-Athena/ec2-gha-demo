@@ -14,7 +14,7 @@ permissions:
   contents: read
 jobs:
   ec2:
-    uses: Open-Athena/ec2/.github/workflows/runner.yml@dev
+    uses: Open-Athena/ec2/.github/workflows/runner.yml@rw/dbg
     secrets: inherit
   prepare:
     needs: ec2
@@ -34,14 +34,14 @@ jobs:
         if: ${{ inputs.sleep > 0 }}
         run: sleep ${{ inputs.sleep }}
   train:
-    needs: prepare
+    needs: [ec2, prepare]
     runs-on: ${{ needs.ec2.outputs.instance }}
     steps:
       - name: Verify same GPU
         run: |
           echo "=== Training model on GPU ==="
           current_uuid=$(nvidia-smi --query-gpu=gpu_uuid --format=csv,noheader)
-          if [[ "$current_uuid" == "${{ needs.prepare-gpu.outputs.gpu-uuid }}" ]]; then
+          if [[ "$current_uuid" == "${{ needs.prepare.outputs.gpu-uuid }}" ]]; then
             echo "✅ Confirmed: Using same GPU as preparation job"
           else
             echo "❌ ERROR: Different GPU!"
@@ -51,7 +51,7 @@ jobs:
         if: ${{ inputs.sleep > 0 }}
         run: sleep ${{ inputs.sleep }}
   eval:
-    needs: train
+    needs: [ec2, train]
     runs-on: ${{ needs.ec2.outputs.instance }}
     steps:
       - name: Sleep (${{ inputs.sleep }}s)
