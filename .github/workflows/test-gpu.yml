@@ -1,8 +1,52 @@
 name: Test EC2 GPU Runner
 on:
   workflow_dispatch:
+    inputs:
+      sleep_s:
+        description: "Duration of each sleep in seconds (optional, helps keep instance alive for SSH access and debugging)"
+        required: false
+        type: number
+        default: 0
+      ssh_pubkey:
+        description: "SSH public key to add to authorized_keys (optional, for debugging)"
+        required: false
+        type: string
+      ec2_key_name:
+        description: "Name of an EC2 key pair to use for SSH access (optional, for debugging)"
+        required: false
+        type: string
+      ec2_security_group_id:
+        description: "AWS security group ID (for SSH access; optional, for debugging)"
+        required: false
+        type: string
+permissions:
+  id-token: write  # Required for AWS OIDC authentication
+  contents: read   # Required for actions/checkout
 jobs:
-  placeholder:
-    runs-on: ubuntu-latest
+  ec2:
+    uses: Open-Athena/ec2/.github/workflows/runner.yml@dev
+    secrets:
+      GH_SA_TOKEN: ${{ secrets.GH_SA_TOKEN }}  # GitHub "Service Account" token for runner registration
+    with:
+      # aws_role: ${{ vars.AWS_ROLE }}  # Pass an explicit value here, or Open-Athena/ec2 will fall back to `vars.AWS_ROLE`
+      ssh_pubkey: ${{ inputs.ssh_pubkey }}  # Optional SSH key to install on node, for debugging
+      ec2_key_name: ${{ inputs.ec2_key_name }}  # Name of the EC2 key pair to use for SSH access
+      ec2_security_group_id: ${{ inputs.ec2_security_group_id }}  # Security group for SSH access
+  gpu-test:
+    needs: ec2
+    runs-on: ${{ needs.ec2.outputs.instance }}
     steps:
-      - run: echo "Placeholder workflow"
+      - uses: actions/checkout@v4
+      - name: System info
+        run: ./scripts/system-info.sh
+      - name: Check NVIDIA GPU
+        run: ./scripts/check-nvidia-gpu.sh
+      - name: Test CUDA
+        run: ./scripts/test-cuda.sh
+      - name: Python GPU test
+        run: ./scripts/test-python-gpu.sh
+      - name: Self-termination check
+        run: ./scripts/check-self-termination.sh
+      - name: Sleep (${{ inputs.sleep_s }}s)
+        if: ${{ inputs.sleep_s > 0 }}
+        run: sleep ${{ inputs.sleep_s }}
