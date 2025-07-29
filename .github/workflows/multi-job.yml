@@ -1,0 +1,65 @@
+name: Multi-Job GPU Instance Test
+# Demonstrates multiple jobs running sequentially on the same GPU instance
+# The instance only terminates after ALL jobs complete
+on:
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  ec2:
+    uses: Open-Athena/ec2/.github/workflows/runner.yml@dev
+    secrets: inherit
+  prepare-gpu:
+    needs: ec2
+    runs-on: ${{ needs.ec2.outputs.instance }}
+    outputs:
+      gpu-uuid: ${{ steps.gpu-info.outputs.uuid }}
+    steps:
+      - name: Get GPU info
+        id: gpu-info
+        run: |
+          echo "=== Preparing GPU environment ==="
+          nvidia-smi
+          uuid=$(nvidia-smi --query-gpu=gpu_uuid --format=csv,noheader)
+          echo "uuid=$uuid" >> $GITHUB_OUTPUT
+          echo "GPU UUID: $uuid"
+      - name: Install dependencies
+        run: |
+          echo "Installing GPU libraries..."
+          sleep 10  # Simulate installation
+          echo "✅ Dependencies installed"
+  train-model:
+    needs: prepare-gpu
+    runs-on: ${{ needs.ec2.outputs.instance }}
+    steps:
+      - name: Verify same GPU
+        run: |
+          echo "=== Training model on GPU ==="
+          current_uuid=$(nvidia-smi --query-gpu=gpu_uuid --format=csv,noheader)
+          if [[ "$current_uuid" == "${{ needs.prepare-gpu.outputs.gpu-uuid }}" ]]; then
+            echo "✅ Confirmed: Using same GPU as preparation job"
+          else
+            echo "❌ ERROR: Different GPU!"
+            exit 1
+          fi
+      - name: Train model
+        run: |
+          echo "Starting model training..."
+          sleep 20  # Simulate training
+          echo "Model checkpoint saved to /tmp/model.ckpt"
+          echo "✅ Training complete"
+  evaluate-model:
+    needs: train-model
+    runs-on: ${{ needs.ec2.outputs.instance }}
+    steps:
+      - name: Load and evaluate
+        run: |
+          echo "=== Evaluating model ==="
+          echo "Loading model from checkpoint..."
+          sleep 15  # Simulate evaluation
+          echo "Accuracy: 94.2%"
+          echo "✅ Evaluation complete"
+      - name: Final message
+        run: |
+          echo "All jobs complete! Instance will terminate via runner hook."
