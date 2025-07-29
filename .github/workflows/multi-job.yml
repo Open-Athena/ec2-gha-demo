@@ -3,6 +3,12 @@ name: Multi-Job GPU Instance Test
 # The instance only terminates after ALL jobs complete
 on:
   workflow_dispatch:
+    inputs:
+      sleep:
+        description: "Sleep this many seconds at the end of the `prepare`, `train`, and `eval` jobs (optional, for SSH access and debugging)"
+        required: false
+        type: number
+        default: 0
 permissions:
   id-token: write
   contents: read
@@ -10,7 +16,7 @@ jobs:
   ec2:
     uses: Open-Athena/ec2/.github/workflows/runner.yml@dev
     secrets: inherit
-  prepare-gpu:
+  prepare:
     needs: ec2
     runs-on: ${{ needs.ec2.outputs.instance }}
     outputs:
@@ -24,13 +30,11 @@ jobs:
           uuid=$(nvidia-smi --query-gpu=gpu_uuid --format=csv,noheader)
           echo "uuid=$uuid" >> $GITHUB_OUTPUT
           echo "GPU UUID: $uuid"
-      - name: Install dependencies
-        run: |
-          echo "Installing GPU libraries..."
-          sleep 10  # Simulate installation
-          echo "✅ Dependencies installed"
-  train-model:
-    needs: prepare-gpu
+      - name: Sleep (${{ inputs.sleep }}s)
+        if: ${{ inputs.sleep > 0 }}
+        run: sleep ${{ inputs.sleep }}
+  train:
+    needs: prepare
     runs-on: ${{ needs.ec2.outputs.instance }}
     steps:
       - name: Verify same GPU
@@ -43,23 +47,13 @@ jobs:
             echo "❌ ERROR: Different GPU!"
             exit 1
           fi
-      - name: Train model
-        run: |
-          echo "Starting model training..."
-          sleep 20  # Simulate training
-          echo "Model checkpoint saved to /tmp/model.ckpt"
-          echo "✅ Training complete"
-  evaluate-model:
-    needs: train-model
+      - name: Sleep (${{ inputs.sleep }}s)
+        if: ${{ inputs.sleep > 0 }}
+        run: sleep ${{ inputs.sleep }}
+  eval:
+    needs: train
     runs-on: ${{ needs.ec2.outputs.instance }}
     steps:
-      - name: Load and evaluate
-        run: |
-          echo "=== Evaluating model ==="
-          echo "Loading model from checkpoint..."
-          sleep 15  # Simulate evaluation
-          echo "Accuracy: 94.2%"
-          echo "✅ Evaluation complete"
-      - name: Final message
-        run: |
-          echo "All jobs complete! Instance will terminate via runner hook."
+      - name: Sleep (${{ inputs.sleep }}s)
+        if: ${{ inputs.sleep > 0 }}
+        run: sleep ${{ inputs.sleep }}

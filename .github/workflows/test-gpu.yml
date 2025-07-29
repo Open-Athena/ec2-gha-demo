@@ -2,16 +2,11 @@ name: Test EC2 GPU Runner
 on:
   workflow_dispatch:
     inputs:
-      n_sleeps:
-        description: "Number of sleep iterations to perform"
+      sleep:
+        description: "Duration of each sleep in seconds (optional, helps keep instance alive for SSH access and debugging)"
         required: false
         type: number
         default: 0
-      sleep_s:
-        description: "Duration of each sleep in seconds"
-        required: false
-        type: number
-        default: 60
       ssh_pubkey:
         description: "SSH public key to add to authorized_keys (optional, for debugging)"
         required: false
@@ -52,12 +47,6 @@ jobs:
         run: ./scripts/test-python-gpu.sh
       - name: Self-termination check
         run: ./scripts/check-self-termination.sh
-      - name: Sleep loop test
-        run: |
-          echo "=== Sleep Loop Test ==="
-          echo "Performing ${{ inputs.n_sleeps }} sleep iterations of ${{ inputs.sleep_s }} seconds each"
-          for i in $(seq 1 ${{ inputs.n_sleeps }}); do
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] Sleep iteration $i/${{ inputs.n_sleeps }} - sleeping for ${{ inputs.sleep_s }} seconds..."
-            sleep ${{ inputs.sleep_s }}
-          done
-          echo "[$(date '+%Y-%m-%d %H:%M:%S')] Sleep loop completed"
+      - name: Sleep (${{ inputs.sleep }}s)
+        if: ${{ inputs.sleep > 0 }}
+        run: sleep ${{ inputs.sleep }}
