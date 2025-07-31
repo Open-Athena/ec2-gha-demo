@@ -14,7 +14,7 @@ permissions:
   contents: read
 jobs:
   ec2:
-    uses: Open-Athena/ec2/.github/workflows/runner.yml@rw/dbg
+    uses: Open-Athena/ec2-gha/.github/workflows/runner.yml@rw/hooks
     secrets: inherit
   prepare:
     needs: ec2
