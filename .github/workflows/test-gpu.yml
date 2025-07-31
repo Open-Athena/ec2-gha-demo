@@ -28,7 +28,6 @@ jobs:
     secrets:
       GH_SA_TOKEN: ${{ secrets.GH_SA_TOKEN }}  # GitHub "Service Account" token for runner registration
     with:
-      action_ref: rw/hooks  # Match the ref we're using to call the workflow
       # aws_role: ${{ vars.AWS_ROLE }}  # Pass an explicit value here, or Open-Athena/ec2 will fall back to `vars.AWS_ROLE`
       ssh_pubkey: ${{ inputs.ssh_pubkey }}  # Optional SSH key to install on node, for debugging
       ec2_key_name: ${{ inputs.ec2_key_name }}  # Name of the EC2 key pair to use for SSH access
