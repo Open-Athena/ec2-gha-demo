@@ -8,6 +8,8 @@ jobs:
   ec2:
     uses: Open-Athena/ec2-gha/.github/workflows/runner.yml@rw/hooks
     secrets: inherit
+    with:
+      action_ref: rw/hooks  # Match the ref we're using to call the workflow
   gpu-test:
     needs: ec2
     runs-on: ${{ needs.ec2.outputs.instance }}
