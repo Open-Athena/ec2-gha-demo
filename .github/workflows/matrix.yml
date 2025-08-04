@@ -1,0 +1,64 @@
+name: Demo – matrix of instances
+on:
+  workflow_dispatch:
+permissions:
+  id-token: write  # Required for AWS OIDC authentication
+  contents: read   # Required for actions/checkout
+jobs:
+  # Launch EC2 runners for each instance type
+  g4dn:
+    name: Launch g4dn.xlarge runner
+    uses: Open-Athena/ec2-gha/.github/workflows/runner.yml@rw/hooks
+    with:
+      ec2_instance_type: g4dn.xlarge
+    secrets: inherit
+  g4ad:
+    name: Launch g4ad.xlarge runner
+    uses: Open-Athena/ec2-gha/.github/workflows/runner.yml@rw/hooks
+    with:
+      ec2_instance_type: g4ad.xlarge
+    secrets: inherit
+
+  # Run jobs directly on launched instances
+  test-g4dn:
+    needs: g4dn
+    name: Test g4dn
+    runs-on: ${{ needs.g4dn.outputs.instance }}
+    steps:
+    - name: GPU test on g4dn.xlarge
+      run: nvidia-smi  # Verify GPU is available
+  test-g4ad:
+    needs: g4ad
+    name: Test g4ad
+    runs-on: ${{ needs.g4ad.outputs.instance }}
+    steps:
+    - name: GPU test on g4ad.xlarge
+      run: |
+        lspci | grep -i "vga\|display\|3d\|amd"
+
+  # Use a `matrix` to run jobs on multiple instances
+  test-matrix:
+    needs: [g4dn, g4ad]
+    name: Test ${{ matrix.instance }} (matrix)
+    strategy:
+      matrix:
+        include:
+          - instance: g4dn
+            runner: ${{ needs.g4dn.outputs.instance }}
+          - instance: g4ad
+            runner: ${{ needs.g4ad.outputs.instance }}
+    runs-on: ${{ matrix.runner }}
+    steps:
+    - name: Matrix GPU test on ${{ matrix.instance }}.xlarge
+      run: |
+        echo "Running on ${{ matrix.instance }}.xlarge"
+        echo "Instance type: $(curl -s http://169.254.169.254/latest/meta-data/instance-type)"
+
+        # Check GPU based on instance type
+        if [[ "${{ matrix.instance }}" == "g4dn" ]]; then
+          echo "Testing NVIDIA GPU..."
+          nvidia-smi
+        elif [[ "${{ matrix.instance }}" == "g4ad" ]]; then
+          echo "Testing AMD GPU..."
+          lspci | grep -i "vga\|display\|3d\|amd"
+        fi
